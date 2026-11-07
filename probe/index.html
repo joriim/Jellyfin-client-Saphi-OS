@@ -8,11 +8,14 @@ td{padding:2px 12px;border-bottom:1px solid #333;vertical-align:top}
 <body>
 <h1>Saphi capability probe</h1>
 <p>Press remote keys: <span id="key">-</span></p>
+<p id="send">Results not sent (run tools/devserver.py to collect them).</p>
 <table id="t"></table>
 <script>
 // ES5 only so it runs even on an old engine.
 var rows = [];
-function add(k, v) { rows.push([k, v]); }
+var results = { id: new Date().getTime().toString(36), time: new Date().toString(), checks: {}, keys: [] };
+function strip(v) { return String(v).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' '); }
+function add(k, v) { rows.push([k, v]); results.checks[k] = strip(v); }
 function ok(b) { return b ? '<span class="y">yes</span>' : '<span class="n">no</span>'; }
 function tryEval(src) { try { eval(src); return true; } catch (e) { return false; } }
 
@@ -54,8 +57,30 @@ var html = '';
 for (var i = 0; i < rows.length; i++) html += '<tr><td>' + rows[i][0] + '</td><td>' + rows[i][1] + '</td></tr>';
 document.getElementById('t').innerHTML = html;
 
+// Post the results to tools/devserver.py (POST /tv/probe-results), if it served this page.
+var sendTimer = null;
+function send() {
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/tv/probe-results', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4) {
+        document.getElementById('send').innerHTML = xhr.status === 200
+          ? '<span class="y">Results sent (' + results.keys.length + ' keys).</span>'
+          : 'Results not sent (HTTP ' + xhr.status + '). Take a photo instead.';
+      }
+    };
+    xhr.send(JSON.stringify(results));
+  } catch (err) { /* no dev server: photo it */ }
+}
+send();
+
 document.addEventListener('keydown', function (e) {
-  document.getElementById('key').innerHTML = 'key="' + e.key + '" keyCode=' + e.keyCode;
+  document.getElementById('key').innerHTML = 'key="' + e.key + '" code="' + e.code + '" keyCode=' + e.keyCode;
+  results.keys.push({ key: e.key, code: e.code, keyCode: e.keyCode, which: e.which });
+  if (sendTimer) clearTimeout(sendTimer);
+  sendTimer = setTimeout(send, 1000);
   if (e.keyCode !== 8) e.preventDefault(); // keep Back usable
 });
 </script>

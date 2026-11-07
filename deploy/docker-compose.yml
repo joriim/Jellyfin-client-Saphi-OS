@@ -1,0 +1,19 @@
+# Saphi proxy in front of an existing Jellyfin server.
+#
+#   JELLYFIN_URL=http://192.168.1.10:8096 docker compose up -d
+#
+# Then open http://<docker-host>:8097/ in the TV's browser.
+services:
+  saphi-proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "8097:80"
+    environment:
+      JELLYFIN_URL: ${JELLYFIN_URL:-http://jellyfin:8096}
+      # Only substitute our variable; leave nginx's own $variables alone.
+      NGINX_ENVSUBST_FILTER: JELLYFIN_URL
+    volumes:
+      - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ../shell:/usr/share/nginx/shell:ro
+      - ../probe:/usr/share/nginx/probe:ro

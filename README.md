@@ -9,7 +9,10 @@ that runs in the TV's built-in browser.
 
 ## Status
 
-Research and design. Nothing runs on the TV yet.
+Option A is ready to try on the TV: a Saphi `NativeShell`
+([`shell/saphi.js`](shell/saphi.js)), a dev server that proxies Jellyfin and
+injects it, and an nginx/Docker deployment. It has been tested in desktop
+Chromium only. Nothing has been run on the TV yet.
 
 ## Plan
 
@@ -21,22 +24,38 @@ Research and design. Nothing runs on the TV yet.
    agents as TVs.
 3. **Option A: wrapper.** If jellyfin-web is usable, add a small Saphi
    `NativeShell` adapter (device ID, device profile, keys, exit), as the
-   official Tizen and webOS apps do.
+   official Tizen and webOS apps do. **Built:** see
+   [docs/option-a.md](docs/option-a.md).
 4. **Option B: custom client.** If jellyfin-web is too heavy for the TV, build
    the lightweight client described in [docs/architecture.md](docs/architecture.md).
 
-## Running the probe
+## Running on the TV
 
 ```sh
-cd probe
-python3 -m http.server 8000
-# On the TV: open http://<your-pc-ip>:8000 in the browser
+python3 tools/devserver.py --jellyfin http://<jellyfin-server>:8096
 ```
 
-Take a photo of the result table, and press each remote key to record its key code.
+Then, in the TV's browser:
+
+- `http://<your-pc-ip>:8000/probe/`: the capability probe. Press each remote
+  key; the results and key codes are saved to `logs/probe-<id>.json`.
+- `http://<your-pc-ip>:8000/web/index.html?saphi-debug=1`: jellyfin-web with
+  the Saphi shell. TV logs appear in `logs/tv.log`.
+
+For a permanent setup, run the nginx proxy in [`deploy/`](deploy/) with
+`docker compose`. See [docs/option-a.md](docs/option-a.md) for both, the
+configuration and a test checklist.
+
+## Tests
+
+```sh
+npm test   # no dependencies: Node 18+ and Python 3.8+
+```
 
 ## Documentation
 
+- [docs/option-a.md](docs/option-a.md): jellyfin-web with the Saphi shell:
+  setup, configuration, test checklist
 - [docs/saphi-platform.md](docs/saphi-platform.md): what is known about Saphi
   OS and the 55OLED754/12
 - [docs/architecture.md](docs/architecture.md): architecture of the custom
