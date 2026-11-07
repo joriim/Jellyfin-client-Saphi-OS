@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Saphi probe</title>
+<style>
+body{background:#111;color:#eee;font:20px/1.4 sans-serif;margin:40px}
+td{padding:2px 12px;border-bottom:1px solid #333;vertical-align:top}
+.y{color:#7f7}.n{color:#f77}#key{font-size:28px;color:#ff7}
+</style></head>
+<body>
+<h1>Saphi capability probe</h1>
+<p>Press remote keys: <span id="key">-</span></p>
+<table id="t"></table>
+<script>
+// ES5 only so it runs even on an old engine.
+var rows = [];
+function add(k, v) { rows.push([k, v]); }
+function ok(b) { return b ? '<span class="y">yes</span>' : '<span class="n">no</span>'; }
+function tryEval(src) { try { eval(src); return true; } catch (e) { return false; } }
+
+add('userAgent', navigator.userAgent);
+add('screen', screen.width + 'x' + screen.height + ' / window ' + window.innerWidth + 'x' + window.innerHeight + ' / dpr ' + window.devicePixelRatio);
+add('ES2015 (arrow, let, class)', ok(tryEval('let a=()=>1;class B{}')));
+add('ES2017 async/await', ok(tryEval('(async function(){await 1})')));
+add('Promise', ok(typeof Promise !== 'undefined'));
+add('fetch', ok(typeof fetch !== 'undefined'));
+add('WebSocket', ok(typeof WebSocket !== 'undefined'));
+add('localStorage', ok((function(){try{localStorage.setItem('x','1');return localStorage.getItem('x')==='1';}catch(e){return false;}})()));
+add('CSS grid', ok(window.CSS && CSS.supports && CSS.supports('display','grid')));
+add('MediaSource', ok(!!window.MediaSource));
+add('EME (requestMediaKeySystemAccess)', ok(!!navigator.requestMediaKeySystemAccess));
+add('oipfObjectFactory (HbbTV/OIPF)', ok(!!window.oipfObjectFactory));
+
+var v = document.createElement('video');
+var types = {
+  'MP4 H.264 + AAC': 'video/mp4; codecs="avc1.640028, mp4a.40.2"',
+  'MP4 HEVC (hvc1)': 'video/mp4; codecs="hvc1.2.4.L153.B0"',
+  'MP4 HEVC (hev1)': 'video/mp4; codecs="hev1.2.4.L153.B0"',
+  'WebM VP9': 'video/webm; codecs="vp9"',
+  'MP4 AV1': 'video/mp4; codecs="av01.0.08M.08"',
+  'MP4 AC-3': 'audio/mp4; codecs="ac-3"',
+  'MP4 E-AC-3': 'audio/mp4; codecs="ec-3"',
+  'Matroska': 'video/x-matroska',
+  'MPEG-TS': 'video/mp2t',
+  'HLS (native)': 'application/vnd.apple.mpegurl',
+  'DASH (native)': 'application/dash+xml'
+};
+for (var name in types) {
+  var t = types[name];
+  var cpt = v.canPlayType(t) || '""';
+  var mse = window.MediaSource && MediaSource.isTypeSupported ? MediaSource.isTypeSupported(t) : false;
+  add(name, 'canPlayType=' + cpt + ' &nbsp; MSE=' + ok(mse));
+}
+
+var html = '';
+for (var i = 0; i < rows.length; i++) html += '<tr><td>' + rows[i][0] + '</td><td>' + rows[i][1] + '</td></tr>';
+document.getElementById('t').innerHTML = html;
+
+document.addEventListener('keydown', function (e) {
+  document.getElementById('key').innerHTML = 'key="' + e.key + '" keyCode=' + e.keyCode;
+  if (e.keyCode !== 8) e.preventDefault(); // keep Back usable
+});
+</script>
+</body></html>
