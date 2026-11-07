@@ -1,5 +1,6 @@
 # Reverse proxy for Jellyfin on a Saphi TV (Option A).
 #
+#   /web/saphi/  the Saphi client (Option B)
 #   /tv/*   the Saphi shell (saphi.js, config.js) and the probe
 #   /*      Jellyfin; jellyfin-web's index.html gets the shell injected
 #
@@ -20,6 +21,12 @@ server {
 
     location /tv/ {
         alias /usr/share/nginx/shell/;
+        add_header Cache-Control "no-cache";
+    }
+
+    # The Saphi client (Option B)
+    location /web/saphi/ {
+        alias /usr/share/nginx/app/;
         add_header Cache-Control "no-cache";
     }
 

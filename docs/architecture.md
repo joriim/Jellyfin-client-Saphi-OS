@@ -1,42 +1,44 @@
-# Architecture: custom client (Option B)
+# Architecture: the Saphi client (Option B)
 
-This is the design for a lightweight client of our own. It is used only if
-jellyfin-web is too heavy or broken on the Saphi browser (see the plan in the
-[README](../README.md)). The playback and device-profile parts are needed in
-both options.
+The design of our own lightweight TV client, the main line of the project
+since the [plan review](plan-review.md). What is built and how to use it:
+[client.md](client.md). Sections marked **(changed)** were revised in the
+review.
 
 ## 1. Constraints
 
 | Constraint | Consequence |
 |---|---|
-| No SDK, no app store | A web app opened in the browser, or through a custom home tile |
-| Browser engine unknown | Target ES5 and add polyfills based on the probe. Keep everything Saphi-specific in one platform layer |
+| No SDK, no app store | A web app opened from a browser bookmark (no home-tile route exists) |
+| Browser engine unknown, probably old | Write ES5 directly; no transpiling. Keep everything Saphi-specific in one platform layer |
 | 2019 SoC, little memory | No heavy framework, a small bundle, few DOM nodes, images requested at their display size |
 | Remote control only | Focus moved with the arrow keys; Back goes to the previous screen |
 | Unclear codec support | Start with a conservative DeviceProfile and widen it using the probe and test clips |
 | No remote debugger on the TV | An on-screen log overlay plus logs posted to the dev machine, from day one |
 
-## 2. Deployment
+## 2. Deployment (changed)
 
 ```
  ┌──────────── Philips 55OLED754 (Saphi) ────────────┐
- │ Saphi browser  /  custom home tile (optional)     │
- │   └─ Jellyfin Saphi client (same origin)          │
+ │ Internet browser, bookmark                        │
+ │   └─ http://<server>:8096/web/saphi/              │
  └───────────────┬───────────────────────────────────┘
-                 │ HTTP(S) on the LAN
+                 │ HTTP(S) on the LAN, same origin
  ┌───────────────▼───────────────────────────────────┐
- │ Reverse proxy (Caddy/nginx, Docker)               │
- │   /tv/*      → static client (versioned bundles)  │
- │   /tv/log    → log sink (dev builds only)         │
- │   /*         → Jellyfin server :8096              │
- └───────────────┬───────────────────────────────────┘
-                 ▼
-          Jellyfin server (API, transcoding, HLS)
+ │ Jellyfin server                                   │
+ │   /web/saphi/*  the client (app/ copied or        │
+ │                 mounted into the web folder)      │
+ │   /*            API, images, streams, HLS         │
+ └───────────────────────────────────────────────────┘
 ```
 
-Serving the client from the same origin as Jellyfin avoids CORS preflight
-requests on an old engine, and avoids mixed HTTP/HTTPS content. The client also
-works with a separately entered server URL.
+Serving the client from Jellyfin's own web folder makes it the same origin as
+the API. That gives no CORS preflights on an old engine, no mixed HTTP/HTTPS
+content, and no extra service to run. The same path works through a reverse
+proxy. For development, or to leave the server untouched,
+`tools/devserver.py` and the nginx config in `deploy/` serve `/web/saphi/` in
+front of Jellyfin. The Connect screen still accepts any server address, for
+servers that allow cross-origin requests.
 
 ## 3. Layers
 
@@ -90,8 +92,9 @@ interface Platform {
 
 - **Auth header:**
   `Authorization: MediaBrowser Client="Jellyfin Saphi", Device="Philips Saphi TV", DeviceId="…", Version="…", Token="…"`
-- **Types:** use the types from `@jellyfin/sdk` (jellyfin-sdk-typescript). Keep
-  our own small fetch/XHR transport, because the SDK requires axios.
+- **Types (changed):** our own small XHR client, documented with JSDoc. The
+  `@jellyfin/sdk` types can be used for `tsc --checkJs` later; no runtime
+  dependency.
 - **Endpoints (Jellyfin 10.9+):**
 
 | Feature | Endpoint |
@@ -214,54 +217,47 @@ storage.
 - Dev builds also POST logs to `/tv/log`.
 - `window.onerror` and unhandled rejections are always captured.
 
-## 5. Technology
+## 5. Technology (changed)
 
 | Area | Choice |
 |---|---|
-| Language | TypeScript |
-| UI | Preact + signals, or no framework |
-| Build | Vite + `@vitejs/plugin-legacy`, or esbuild → ES5. core-js polyfills chosen from the probe |
-| Video | `<video>` first; hls.js loaded only when needed |
-| Styling | Plain CSS on a 1920×1080 design canvas, scaled with one root `transform` |
-| Tests | Vitest (profile builder, focus tree, API client), Playwright on desktop (screen flows) |
-| Delivery | Docker image: nginx serving the client and proxying Jellyfin |
+| Language | ES5 JavaScript, written directly; JSDoc for types. A test rejects ES2015+ syntax |
+| UI | No framework: small DOM helpers, a row-based focus model, a screen stack |
+| Build | None. `index.html` loads the scripts in order. A concatenating build can come later if load time on the TV needs it |
+| Video | `<video>` with direct play, native HLS or progressive transcodes. hls.js only if the probe finds MSE but no native HLS |
+| Styling | Plain CSS on a 1920×1080 canvas, scaled with one root `transform`; no CSS grid or custom properties |
+| Tests | `node:test` unit tests in a VM sandbox; Playwright end-to-end tests driven by remote keys against `tools/fakejellyfin.py` |
+| Delivery | Copy `app/` into Jellyfin's web folder, or the nginx image in `deploy/` |
 
-Budget: under 120 kB gzipped for the start screen. The player code and hls.js
-load separately.
+Why not TypeScript, Vite and Preact as first planned: for an engine that may
+only run ES5, every transpile and polyfill step can let in code the TV cannot
+run, and the TV has no debugger. Plain ES5 means the TV runs exactly what is
+in the repository.
 
 ## 6. Updates
 
-`index.html` is a tiny loader. It fetches `manifest.json`, then loads
-`app.<hash>.js`, so updating the server updates the TV without stale caches.
+Updating the files on the server updates the TV. The dev server and nginx send
+`Cache-Control: no-cache` for the client. Jellyfin serves its web folder with
+its own caching, so a version query on the script URLs may be needed if the TV
+holds stale copies (check on the TV).
 
-## 7. Repository layout
+## 7. Repository layout (changed)
 
 ```
-src/
-  platform/   saphi.ts  desktop.ts  index.ts
-  api/        client.ts  auth.ts  items.ts  playback.ts  images.ts
-  nav/        router.ts  focus.ts  keys.ts
-  playback/   profile.ts  decide.ts  players/{native,hlsjs,oipf}.ts
-              reporter.ts  subtitles.ts  segments.ts  trickplay.ts
-  store/      session.ts  settings.ts  cache.ts
-  ui/         components/  screens/
-  debug/      logger.ts  overlay.ts
-probe/        index.html
-deploy/       Dockerfile  Caddyfile
-tests/
+app/          the client (Option B): index.html, css/, js/
+shell/        NativeShell for jellyfin-web (Option A)
+probe/        capability probe page
+tools/        devserver.py (proxy, log sink), fakejellyfin.py (test server)
+deploy/       nginx + docker compose
+tests/        unit tests; e2e/ end-to-end tests
+docs/
 ```
 
 ## 8. Milestones
 
-1. **Probe:** run the probe and test clips on the TV. This sets the build
-   target, the first DeviceProfile and the key map.
-2. **Foundation:** platform layer, logger, focus tree, Quick Connect login.
-3. **Browsing:** Home rows, library grids, details pages.
-4. **Playback MVP:** direct play / HLS, progress reporting, resume.
-5. **Tracks:** subtitle overlay, audio switching, next episode, segment skipping.
-6. **Polish:** search, settings, performance, Docker image, custom home tile.
-7. **Later:** remote control over the WebSocket, music, Live TV, Titan OS
-   platform layer.
+See the revised list in [plan-review.md](plan-review.md#revised-milestones).
+Milestones 1–4 of the original list (probe tooling, foundation, browsing,
+playback MVP) are built; running the probe on the TV is still open.
 
 ## 9. Decisions that wait on the probe
 

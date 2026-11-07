@@ -2,7 +2,8 @@
 #
 #   JELLYFIN_URL=http://192.168.1.10:8096 docker compose up -d
 #
-# Then open http://<docker-host>:8097/ in the TV's browser.
+# Then open http://<docker-host>:8097/web/saphi/ (the Saphi client) or
+# http://<docker-host>:8097/web/ (jellyfin-web with the Saphi shell) on the TV.
 services:
   saphi-proxy:
     image: nginx:1.27-alpine
@@ -17,3 +18,4 @@ services:
       - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ../shell:/usr/share/nginx/shell:ro
       - ../probe:/usr/share/nginx/probe:ro
+      - ../app:/usr/share/nginx/app:ro

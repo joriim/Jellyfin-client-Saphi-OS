@@ -142,6 +142,12 @@ class DevServerTest(unittest.TestCase):
         self.assertEqual(resp.status, 200)
         self.assertIn(b"Saphi capability probe", body)
 
+    def test_serves_saphi_client(self):
+        resp, body = self.request("GET", "/web/saphi/")
+        self.assertEqual(resp.status, 200)
+        self.assertIn(b"JF.app.start", body)
+        self.assertNotIn(b"/tv/saphi.js", body)  # the client is not jellyfin-web
+
     def test_static_rejects_path_traversal(self):
         resp, _ = self.request("GET", "/tv/..%2f..%2fREADME.md")
         self.assertEqual(resp.status, 404)

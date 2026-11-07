@@ -2,6 +2,7 @@
 """Development server for the Saphi client. Python 3.8+ standard library only.
 
 Serves:
+  /web/saphi/...  the Saphi client (app/), Option B
   /probe/...      the capability probe (probe/)
   /tv/...         the Saphi shell (shell/)
   POST /tv/log    log entries from the TV  -> logs/tv.log
@@ -33,6 +34,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = {
     "/probe/": os.path.join(ROOT, "probe"),
     "/tv/": os.path.join(ROOT, "shell"),
+    # The custom client (Option B), at the path it has when installed into
+    # Jellyfin's web folder.
+    "/web/saphi/": os.path.join(ROOT, "app"),
 }
 INJECT = b'<script src="/tv/config.js"></script><script src="/tv/saphi.js"></script>'
 HOP_BY_HOP = {
@@ -349,6 +353,7 @@ def main():
         pass
     print("Probe:        http://%s:%d/probe/" % (ip, args.port))
     if args.jellyfin:
+        print("Saphi client: http://%s:%d/web/saphi/" % (ip, args.port))
         print("jellyfin-web: http://%s:%d/web/  (proxying %s, shell injected)" % (ip, args.port, args.jellyfin))
     print("Logs:         %s" % os.path.join(ROOT, "logs"))
     try:
