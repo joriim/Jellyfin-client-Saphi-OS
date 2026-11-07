@@ -30,6 +30,10 @@ plan changed.
 
 ## Try it
 
+**First time? Follow the step-by-step guide:
+[docs/tv-setup-guide.md](docs/tv-setup-guide.md)** (PC, Jellyfin server and
+TV on the same network; about 30–45 minutes).
+
 **On the TV**, with the client installed on your Jellyfin server
 ([docs/client.md](docs/client.md)): open
 `http://<server>:8096/web/saphi/` in the Internet browser and bookmark it.
@@ -45,7 +49,7 @@ Then, in the TV's browser:
 - `http://<pc-ip>:8000/probe/`: the capability probe. Press every remote key;
   results and key codes are saved to `logs/probe-<id>.json`. **Please do this
   first** and share the file.
-- `http://<pc-ip>:8000/web/saphi/`: the client.
+- `http://<pc-ip>:8000/`: the client (redirects to `/web/saphi/`).
 - `http://<pc-ip>:8000/web/index.html?saphi-debug=1`: jellyfin-web with the
   Saphi shell (the Option A experiment, [docs/option-a.md](docs/option-a.md)).
 
@@ -64,6 +68,8 @@ npm run e2e    # end-to-end in Chromium (Playwright) against the fake server
 
 ## Documentation
 
+- [docs/tv-setup-guide.md](docs/tv-setup-guide.md): step-by-step guide for
+  trying it on your TV, with troubleshooting
 - [docs/client.md](docs/client.md): the Saphi client: install, use, settings,
   how playback works, development
 - [docs/plan-review.md](docs/plan-review.md): critical review of the plan,

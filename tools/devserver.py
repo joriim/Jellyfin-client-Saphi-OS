@@ -88,7 +88,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def _dispatch(self):
         path = urllib.parse.urlsplit(self.path).path
         if path == "/":
-            return self._redirect("/web/" if self.jellyfin else "/probe/")
+            # Short to type with a remote: the root opens the Saphi client.
+            return self._redirect("/web/saphi/" if self.jellyfin else "/probe/")
         for prefix, directory in STATIC.items():
             if path == prefix.rstrip("/"):
                 return self._redirect(prefix)
@@ -353,7 +354,7 @@ def main():
         pass
     print("Probe:        http://%s:%d/probe/" % (ip, args.port))
     if args.jellyfin:
-        print("Saphi client: http://%s:%d/web/saphi/" % (ip, args.port))
+        print("Saphi client: http://%s:%d/  (opens /web/saphi/)" % (ip, args.port))
         print("jellyfin-web: http://%s:%d/web/  (proxying %s, shell injected)" % (ip, args.port, args.jellyfin))
     print("Logs:         %s" % os.path.join(ROOT, "logs"))
     try:

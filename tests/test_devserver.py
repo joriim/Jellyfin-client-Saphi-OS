@@ -142,6 +142,11 @@ class DevServerTest(unittest.TestCase):
         self.assertEqual(resp.status, 200)
         self.assertIn(b"Saphi capability probe", body)
 
+    def test_root_opens_the_client(self):
+        resp, _ = self.request("GET", "/")
+        self.assertEqual(resp.status, 302)
+        self.assertEqual(resp.getheader("Location"), "/web/saphi/")
+
     def test_serves_saphi_client(self):
         resp, body = self.request("GET", "/web/saphi/")
         self.assertEqual(resp.status, 200)
