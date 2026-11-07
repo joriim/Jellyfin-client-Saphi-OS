@@ -53,6 +53,12 @@ class FakeJellyfin(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(part)))
             self.end_headers()
             self.wfile.write(part)
+        elif self.path == "/echo-headers":
+            body = json.dumps(self.headers.get_all("Cookie") or []).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
         elif self.path == "/System/Info/Public":
             # No Content-Length: forces the proxy to re-chunk.
             self.send_response(200)
@@ -65,6 +71,12 @@ class FakeJellyfin(http.server.BaseHTTPRequestHandler):
             self.send_response(404)
             self.send_header("Content-Length", "0")
             self.end_headers()
+
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html")
+        self.send_header("Content-Length", str(len(INDEX)))
+        self.end_headers()
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length") or 0)
@@ -162,6 +174,45 @@ class DevServerTest(unittest.TestCase):
 
         resp, body = self.request("POST", "/tv/probe-results", body=json.dumps({"id": "../../etc"}))
         self.assertNotIn("..", json.loads(body)["saved"])
+
+    def test_head_on_web_index_passes_real_length(self):
+        resp, body = self.request("HEAD", "/web/index.html")
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(int(resp.getheader("Content-Length")), len(INDEX))
+
+    def test_repeated_headers_are_kept(self):
+        s = socket.create_connection(("127.0.0.1", self.port), timeout=5)
+        s.sendall(b"GET /echo-headers HTTP/1.1\r\nHost: x\r\nCookie: a=1\r\nCookie: b=2\r\nConnection: close\r\n\r\n")
+        data = b""
+        while True:
+            chunk = s.recv(4096)
+            if not chunk:
+                break
+            data += chunk
+        s.close()
+        self.assertEqual(json.loads(data.split(b"\r\n\r\n", 1)[1]), ["a=1", "b=2"])
+
+    def test_oversized_body_gets_413_and_closes_connection(self):
+        s = socket.create_connection(("127.0.0.1", self.port), timeout=5)
+        s.sendall(b"POST /Items HTTP/1.1\r\nHost: x\r\nContent-Length: %d\r\n\r\n" % (devserver.MAX_BODY + 1))
+        data = b""
+        while True:
+            chunk = s.recv(4096)
+            if not chunk:
+                break  # the server closed the connection
+            data += chunk
+        s.close()
+        self.assertIn(b" 413 ", data.split(b"\r\n")[0])
+        self.assertEqual(data.count(b"HTTP/1.1"), 1)
+
+    def test_bad_log_shapes_get_400(self):
+        for body in ("[]", '{"entries": 5}', "not json"):
+            resp, _ = self.request("POST", "/tv/log", body=body)
+            self.assertEqual(resp.status, 400, body)
+        resp, _ = self.request("POST", "/tv/log", body='{"entries": [{"t": "x", "msg": "odd"}, 7]}')
+        self.assertEqual(resp.status, 204)
+        resp, _ = self.request("POST", "/tv/probe-results", body="[1]")
+        self.assertEqual(resp.status, 400)
 
     def test_websocket_upgrade_is_tunnelled(self):
         # A raw echo server stands in for Jellyfin's /socket.

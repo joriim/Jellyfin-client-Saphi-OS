@@ -25,6 +25,7 @@ import os
 import select
 import socket
 import socketserver
+import ssl
 import sys
 import urllib.parse
 
@@ -110,10 +111,26 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self._send(302, b"", "text/plain", {"Location": location})
 
     def _read_body(self):
-        length = int(self.headers.get("Content-Length") or 0)
-        if length > MAX_BODY:
-            raise ValueError("body too large")
+        """Read the request body. Raises BodyTooLarge (leaving it unread)."""
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = -1
+        if length < 0 or length > MAX_BODY:
+            # The body stays on the socket, so this connection cannot be reused.
+            self.close_connection = True
+            raise BodyTooLarge()
         return self.rfile.read(length) if length else b""
+
+    def _read_json(self):
+        """Returns the parsed JSON body, or None after sending an error reply."""
+        try:
+            return json.loads(self._read_body() or b"{}")
+        except BodyTooLarge:
+            self._send(413, b"too large\n", "text/plain")
+        except ValueError:
+            self._send(400, b"bad json\n", "text/plain")
+        return None
 
     def _static(self, directory, rel):
         rel = urllib.parse.unquote(rel) or "index.html"
@@ -132,24 +149,33 @@ class Handler(http.server.BaseHTTPRequestHandler):
             f.write(text)
 
     def _save_log(self):
-        try:
-            data = json.loads(self._read_body() or b"{}")
-        except ValueError:
-            return self._send(400, b"bad json\n", "text/plain")
+        data = self._read_json()
+        if data is None:
+            return
+        entries = data.get("entries") if isinstance(data, dict) else None
+        if not isinstance(entries, list):
+            return self._send(400, b"expected {\"entries\": [...]}\n", "text/plain")
         lines = []
-        for e in data.get("entries", []):
-            ts = datetime.datetime.fromtimestamp(e.get("t", 0) / 1000).strftime("%H:%M:%S.%f")[:-3]
+        for e in entries:
+            if not isinstance(e, dict):
+                continue
+            try:
+                ts = datetime.datetime.fromtimestamp(float(e.get("t", 0)) / 1000).strftime("%H:%M:%S.%f")[:-3]
+            except (TypeError, ValueError, OverflowError, OSError):
+                ts = "--:--:--.---"
             lines.append("%s %-5s %s\n" % (ts, e.get("level", "log"), e.get("msg", "")))
         text = "".join(lines)
         self._append("tv.log", text)
-        sys.stdout.write(text)
+        if not os.environ.get("SAPHI_QUIET"):
+            sys.stdout.write(text)
         self._send(204, b"", "text/plain")
 
     def _save_probe(self):
-        try:
-            data = json.loads(self._read_body() or b"{}")
-        except ValueError:
-            return self._send(400, b"bad json\n", "text/plain")
+        data = self._read_json()
+        if data is None:
+            return
+        if not isinstance(data, dict):
+            return self._send(400, b"expected a JSON object\n", "text/plain")
         run = str(data.get("id", ""))
         if not (run.isascii() and run.isalnum()) or len(run) > 32:
             run = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -157,26 +183,29 @@ class Handler(http.server.BaseHTTPRequestHandler):
         os.makedirs(self.log_dir, exist_ok=True)
         with open(os.path.join(self.log_dir, name), "w", encoding="utf-8") as f:
             f.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-        print("probe results saved to logs/%s" % name)
+        if not os.environ.get("SAPHI_QUIET"):
+            print("probe results saved to logs/%s" % name)
         self._send(200, json.dumps({"saved": name}).encode(), "application/json")
 
     # ------------------------------------------------------------ proxy
 
-    def _upstream_headers(self):
-        headers = {}
-        for k, v in self.headers.items():
-            if k.lower() in HOP_BY_HOP or k.lower() == "host":
-                continue
-            headers[k] = v
-        headers["Host"] = self.jellyfin.netloc
-        headers["X-Forwarded-For"] = self.client_address[0]
-        headers["X-Forwarded-Host"] = self.headers.get("Host", "")
-        headers["X-Forwarded-Proto"] = "http"
-        if is_web_index(self.path):
+    def _upstream_headers(self, injecting):
+        """Request headers for Jellyfin, as a list so repeated headers survive."""
+        drop = set(HOP_BY_HOP) | {"host", "x-forwarded-for", "x-forwarded-host", "x-forwarded-proto"}
+        # Headers named in Connection are hop-by-hop too.
+        for name in self.headers.get("Connection", "").split(","):
+            drop.add(name.strip().lower())
+        if injecting:
             # Plain, uncached HTML is needed to inject into.
-            for k in list(headers):
-                if k.lower() in ("if-none-match", "if-modified-since", "accept-encoding"):
-                    headers.pop(k)
+            drop |= {"if-none-match", "if-modified-since", "accept-encoding"}
+        headers = [(k, v) for k, v in self.headers.items() if k.lower() not in drop]
+        forwarded = self.headers.get_all("X-Forwarded-For") or []
+        headers += [
+            ("Host", self.jellyfin.netloc),
+            ("X-Forwarded-For", ", ".join(forwarded + [self.client_address[0]])),
+            ("X-Forwarded-Host", self.headers.get("Host", "")),
+            ("X-Forwarded-Proto", "http"),
+        ]
         return headers
 
     def _connect(self):
@@ -189,18 +218,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self._tunnel()
         try:
             body = self._read_body()
-        except ValueError:
+        except BodyTooLarge:
             return self._send(413, b"too large\n", "text/plain")
+        injecting = is_web_index(self.path) and self.command == "GET"
         conn = self._connect()
         try:
-            conn.request(self.command, self.path, body=body or None, headers=self._upstream_headers())
+            conn.putrequest(self.command, self.path, skip_host=True, skip_accept_encoding=True)
+            for k, v in self._upstream_headers(injecting):
+                conn.putheader(k, v)
+            conn.endheaders(body or None)
             resp = conn.getresponse()
         except OSError as e:
             conn.close()
             return self._send(502, ("jellyfin unreachable: %s\n" % e).encode(), "text/plain")
 
         try:
-            if is_web_index(self.path) and resp.status == 200:
+            if injecting and resp.status == 200:
                 html = inject_shell(resp.read())
                 extra = {k: v for k, v in resp.getheaders()
                          if k.lower() not in HOP_BY_HOP | {"content-length", "content-type", "etag", "last-modified"}}
@@ -230,15 +263,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self.wfile.write(chunk)
             if chunked:
                 self.wfile.write(b"0\r\n\r\n")
-        except (BrokenPipeError, ConnectionResetError):
-            self.close_connection = True  # the TV stopped reading (seek, stop)
+        except OSError as e:
+            # The TV stopped reading (seek, stop), or Jellyfin stalled or went
+            # away mid-stream. The response is cut short, so drop the connection.
+            self.close_connection = True
+            if not isinstance(e, (BrokenPipeError, ConnectionResetError)):
+                self.log_message("upstream stream ended early: %s", e)
         finally:
             conn.close()
 
     def _tunnel(self):
         j = self.jellyfin
+        tls = j.scheme == "https"
         try:
-            upstream = socket.create_connection((j.hostname, j.port or 80), timeout=10)
+            upstream = socket.create_connection((j.hostname, j.port or (443 if tls else 80)), timeout=10)
+            if tls:
+                upstream = ssl.create_default_context().wrap_socket(upstream, server_hostname=j.hostname)
         except OSError:
             return self._send(502, b"jellyfin unreachable\n", "text/plain")
         lines = ["%s %s HTTP/1.1" % (self.command, self.path)]
@@ -258,6 +298,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     data = s.recv(64 * 1024)
                     if not data:
                         return
+                    # TLS can hold decrypted bytes that select() does not report.
+                    while isinstance(s, ssl.SSLSocket) and s.pending():
+                        data += s.recv(s.pending())
                     (upstream if s is client else client).sendall(data)
         except OSError:
             pass
@@ -269,6 +312,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if os.environ.get("SAPHI_QUIET"):
             return
         sys.stderr.write("%s %s\n" % (self.address_string(), fmt % args))
+
+
+class BodyTooLarge(Exception):
+    pass
 
 
 class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):

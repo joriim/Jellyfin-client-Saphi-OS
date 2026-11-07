@@ -5,6 +5,9 @@
 #
 # ${JELLYFIN_URL} is filled in by the nginx image's envsubst step at start-up.
 
+# TV log lines (POST /tv/log with saphi.js debug on) go to `docker compose logs`.
+log_format saphi_tv escape=json '$time_iso8601 TV $request_body';
+
 map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;
@@ -26,7 +29,17 @@ server {
     }
 
     location = /tv/log {
-        # Dev log sink: entries show up in `docker compose logs`.
+        # nginx only reads a request body it passes on, so hand it to the
+        # sink below; $request_body is then available to the access log.
+        client_body_buffer_size 256k;
+        client_max_body_size 256k;
+        access_log /dev/stdout saphi_tv;
+        proxy_pass http://127.0.0.1:80/tv/log-sink;
+    }
+
+    location = /tv/log-sink {
+        allow 127.0.0.1;
+        deny all;
         access_log off;
         return 204;
     }

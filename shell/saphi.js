@@ -172,7 +172,10 @@
         var entry = { t: new Date().getTime(), level: level, msg: parts.join(' ') };
         logBuffer.push(entry);
         if (logBuffer.length > LOG_LIMIT) logBuffer.shift();
-        if (config.debug) logQueue.push(entry);
+        if (config.debug && config.logUrl) {
+            logQueue.push(entry);
+            if (logQueue.length > LOG_LIMIT) logQueue.shift(); // the sink is down: keep the newest
+        }
         if (overlay && overlay.style.display !== 'none') renderOverlay();
     }
 
@@ -262,9 +265,13 @@
 
     function getFeatures() {
         var list = BASE_FEATURES.concat(config.features.add || []);
-        var remove = config.features.remove || [];
+        var remove = [];
+        var i;
+        for (i = 0; i < (config.features.remove || []).length; i++) {
+            remove.push(String(config.features.remove[i]).toLowerCase());
+        }
         var out = [];
-        for (var i = 0; i < list.length; i++) {
+        for (i = 0; i < list.length; i++) {
             var f = String(list[i]).toLowerCase();
             if (out.indexOf(f) === -1 && remove.indexOf(f) === -1) out.push(f);
         }
@@ -400,6 +407,7 @@
         translateKey: translateKey,
         logs: function () { return logBuffer.slice(); },
         flushLogs: flushLogs,
+        queued: function () { return logQueue.length; },
         toggleOverlay: toggleOverlay
     };
 

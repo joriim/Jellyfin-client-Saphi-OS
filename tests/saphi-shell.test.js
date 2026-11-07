@@ -87,7 +87,7 @@ test('device ID is created once and kept in _deviceId2', () => {
 });
 
 test('supports() is case-insensitive and honours add/remove', () => {
-    const { win } = makeWindow({ config: { features: { add: ['multiserver'], remove: ['exitmenu'] } } });
+    const { win } = makeWindow({ config: { features: { add: ['multiserver'], remove: ['ExitMenu'] } } });
     const supports = win.NativeShell.AppHost.supports;
     assert.ok(supports('Exit'));
     assert.ok(supports('htmlvideoautoplay'));
@@ -172,4 +172,14 @@ test('console output is captured in the log buffer', () => {
     const last = win.SaphiShell.logs().pop();
     assert.strictEqual(last.level, 'warn');
     assert.strictEqual(last.msg, 'hello {"a":1}');
+});
+
+test('the log queue is bounded when there is no log sink', () => {
+    const { win } = makeWindow({ config: { debug: true, logUrl: '' } });
+    for (let i = 0; i < 1000; i++) win.console.log('x' + i);
+    assert.strictEqual(win.SaphiShell.logs().length, 300);
+    assert.strictEqual(win.SaphiShell.queued(), 0);
+    const b = makeWindow({ config: { debug: true } });
+    for (let i = 0; i < 1000; i++) b.win.console.log('x' + i);
+    assert.strictEqual(b.win.SaphiShell.queued(), 300);
 });
