@@ -218,6 +218,12 @@ JF.screens = (function () {
             track.appendChild(c);
         }
         viewport.appendChild(track);
+        // ‹ › page the row for a pointer (the Saphi remote moves a pointer;
+        // arrow keys never reach the page). Handled in JF.app.pageRow.
+        if (items.length > 1) {
+            viewport.appendChild(el('div', 'row-nav prev', '‹'));
+            viewport.appendChild(el('div', 'row-nav next', '›'));
+        }
         section.appendChild(viewport);
         ui.reveal(cards, 0, 9);
         return {
@@ -629,6 +635,15 @@ JF.screens = (function () {
             return row;
         }
 
+        /** On/Off for a codec the TV may only claim to play (see app.capabilities). */
+        function capLine(label, cap) {
+            return line(label, function () { return app.capabilities()[cap] ? 'On' : 'Off'; }, function () {
+                settings.caps = util.extend({}, settings.caps);
+                settings.caps[cap] = !app.capabilities()[cap];
+                app.saveSettings();
+            });
+        }
+
         function bitrateLabel() {
             for (var i = 0; i < BITRATES.length; i++) if (BITRATES[i].value === settings.maxBitrate) return BITRATES[i].label;
             return Math.round(settings.maxBitrate / 1000000) + ' Mbps';
@@ -661,6 +676,8 @@ JF.screens = (function () {
                 app.saveSettings();
             }),
             line('Playback capabilities', function () { return app.capsSummary(); }, function () {}),
+            capLine('HEVC direct play', 'hevc'),
+            capLine('VP9 direct play', 'vp9'),
             line('Version', function () { return JF.version; }, function () {}),
             line('Sign out', null, function () { app.logout(); }),
             line('Change server', null, function () { app.logout(true); })

@@ -117,8 +117,10 @@ Tämä testaa vaihtoehtoa A ilman mitään omaa koodia.
 Tarkistuslista (rastita tai kirjoita huomio):
 
 - [ ] client latautuu (ei tyhjää tai mustaa sivua)
-- [ ] nuolet, OK ja **Back** toimivat kaikkialla
-- [ ] rivien selaus on riittävän sujuvaa
+- [ ] osoitin + OK avaa kortit ja painikkeet; korostus seuraa osoitinta
+- [ ] rivin **‹ ›** -painikkeet selaavat riviä; näkymä ei vieri itsestään
+- [ ] kaukosäätimen **Back** palaa edelliseen näkymään (eikä sulje sivua)
+- [ ] Homessa Back kahdesti nopeasti poistuu clientista
 - [ ] kansikuvat näkyvät
 - [ ] Quick Connect toimii
 - [ ] salasanakirjautuminen toimii (TV:n näppäimistö aukeaa)
@@ -126,7 +128,7 @@ Tarkistuslista (rastita tai kirjoita huomio):
 - [ ] H.264 MP4 -elokuva toistuu. Mitä alapalkissa lukee: *Direct play*,
       *Direct stream* vai *Transcoding*?
 - [ ] MKV-tiedosto toistuu (direct vai transcoding?)
-- [ ] HEVC / 4K -tiedosto toistuu (direct vai transcoding?)
+- [ ] HEVC / 4K -tiedosto toistuu (oletuksena transcoding; kokeile myös Settings → **HEVC direct play: On**)
 - [ ] ääni toimii, ja 5.1 jos sinulla on sellainen
 - [ ] tauko, kelaus eteen ja taakse sekä Stop toimivat
 - [ ] pysäytyksen jälkeen elokuva näkyy rivillä *Continue Watching*, ja
@@ -134,6 +136,9 @@ Tarkistuslista (rastita tai kirjoita huomio):
 - [ ] jakson loputtua seuraava jakso alkaa
 - [ ] kaukosäätimen mediapainikkeet (Play, Pause, Stop, ◄◄, ►►) toimivat
       soittimessa
+- [ ] soittimessa osoittimen liikutus tuo painikkeet näkyviin (‹ Back,
+      −10 s, Play / Pause, +30 s), ja ne toimivat; klikkaus muualle
+      kuvaan tauottaa
 - [ ] muuta outoa: mitä painoit ja mitä tapahtui
 
 ---
@@ -160,7 +165,7 @@ Projektikansiosta PC:ltä:
 | `Address already in use` | Lisää komentoon `--port 8090` ja käytä TV:llä porttia `:8090` |
 | Connect (tai muu painike) ei reagoi | Lataa haara uudelleen, sillä 2026-11-09 lisättiin tuki osoittimelle ja klikkaukselle. Avaa `…/web/saphi/?debug=1`, paina OK muutaman kerran ja lähetä `logs/tv.log` sekä kuva ruudusta. Lokista näkyy, tuliko painallus näppäimenä (`key …`) vai klikkauksena (`click …`) vai ei ollenkaan |
 | Client on TV:llä tyhjä tai musta | TV:n selain ei pysty ajamaan koodia. Tämäkin on tärkeä tulos: lähetä probe-tiedosto ja kuva |
-| Jokin näppäin ei tee mitään (varsinkin Back) | Odotettavaa ennen proben tuloksia. Laita debug-loki päälle, paina näppäintä ja lähetä `logs/tv.log`, josta näkyy näppäinkoodi |
+| Jokin näppäin ei tee mitään | Nuolet liikuttavat vain osoitinta, se on tämän selaimen ominaisuus. Back toimii selaimen historian kautta (2026-11-09 alkaen). Laita debug-loki päälle, paina näppäintä ja lähetä `logs/tv.log`, josta näkyy näppäinkoodi |
 | Video ei käynnisty | Kirjaa alapalkin teksti ja virheilmoitus. Client vaihtaa itse transkoodaukseen, jos suora toisto epäonnistuu |
 | Toisto pätkii | Settings → *Maximum streaming bitrate* → 10 Mbps |
 

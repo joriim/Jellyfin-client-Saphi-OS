@@ -267,3 +267,74 @@ test('pointer: a click on Connect works (TV browsers with a remote-driven pointe
     assert.deepStrictEqual(perrors, []);
     await p.close();
 });
+
+// The 55OLED754/12 browser (probe 2026-11-09): arrows move a pointer and never
+// reach the page; OK clicks; the browser keeps Back for itself (history back).
+const SAPHI_UA = 'Mozilla/5.0 (Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36 OPR/36.0.2128.0 OMI/4.8.0.129.Driver6.32 , _TV_MT5806/091.004.093.001 (Philips, OLED754, wireless)  CE-HTML/1.0 NETTV/4.6.0.2 SignOn/2.0 SmartTvA/5.0.0 WH1.0 en';
+
+test('saphi: pointer only, browser Back, row paging, player buttons, conservative codecs', async () => {
+    const ctx = await browser.newContext({ userAgent: SAPHI_UA, viewport: { width: 1280, height: 720 } });
+    const p = await ctx.newPage();
+    const perrors = [];
+    p.on('pageerror', (e) => perrors.push(e.message));
+    const scr = () => p.evaluate(() => JF.router.current().el.className.replace('screen ', ''));
+    const focused = () => p.evaluate(() => {
+        const f = JF.router.current().el.querySelector('.focused');
+        return f ? f.textContent : null;
+    });
+    await p.goto(BASE + '/web/saphi/');
+
+    // Only H.264 is trusted on Saphi until test clips have played.
+    const caps = await p.evaluate(() => JF.app.capabilities());
+    assert.strictEqual(caps.hevc, false);
+    assert.strictEqual(caps.vp9, false);
+    assert.strictEqual(caps.av1, false);
+
+    // Connect and sign in with the pointer (typing = the TV's on-screen keyboard).
+    await p.click('.screen-connect .btn.primary');
+    await p.waitForSelector('.screen-login');
+    await p.click('.screen-login .field[type=text]');
+    await p.fill('.screen-login .field[type=text]', 'demo');
+    await p.click('.screen-login input[type=password]');
+    await p.keyboard.type('demo');
+    await p.click('.screen-login .btn.primary');
+    await p.waitForSelector('.screen-home .row .row-nav.next');
+
+    // › pages a row; the card under the still pointer must not take focus.
+    const latest = p.locator('.screen-home .row', { hasText: 'Latest Movies' });
+    await latest.locator('.row-nav.next').click();
+    assert.match(await focused(), /The H\.264 Story/);
+    await p.waitForTimeout(400);
+    assert.match(await focused(), /The H\.264 Story/);
+    await latest.locator('.row-nav.prev').click();
+    assert.match(await focused(), /Big Test Movie/);
+
+    // A click opens; the browser's Back returns (history guard).
+    await latest.locator('.card', { hasText: 'Big Test Movie' }).click();
+    await p.waitForSelector('.screen-details .details-title');
+    await p.goBack();
+    await p.waitForSelector('.screen-home', { state: 'visible' });
+    assert.strictEqual(await scr(), 'screen-home');
+    // The guard was pushed again: a second Back also stays in the app.
+    await latest.locator('.card', { hasText: 'Big Test Movie' }).click();
+    await p.waitForSelector('.screen-details .details-title');
+    await p.goBack();
+    await p.waitForSelector('.screen-home', { state: 'visible' });
+
+    // Player: moving the pointer shows clickable controls.
+    await latest.locator('.card', { hasText: 'Big Test Movie' }).click();
+    await p.waitForSelector('.screen-details .btn.primary');
+    await p.click('.screen-details .btn.primary');
+    await p.waitForSelector('.screen-player');
+    await p.mouse.move(400, 300);
+    await p.mouse.move(420, 320);
+    await p.waitForSelector('.osd.visible .osd-controls .btn', { state: 'visible' });
+    const labels = await p.$$eval('.osd-controls .btn', (els) => els.map((e) => e.textContent));
+    assert.deepStrictEqual(labels, ['‹ Back', '−10 s', 'Play / Pause', '+30 s']);
+    await p.click('.osd-controls .btn >> text=‹ Back');
+    await p.waitForSelector('.screen-details', { state: 'visible' });
+    assert.strictEqual(await scr(), 'screen-details');
+
+    assert.deepStrictEqual(perrors, []);
+    await ctx.close();
+});

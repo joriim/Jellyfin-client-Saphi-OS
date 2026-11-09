@@ -48,6 +48,8 @@ JF.app = (function () {
             // into a click instead of a keydown, so pointer input works too.
             document.addEventListener('click', app.onClick, true);
             document.addEventListener('mouseover', app.onPointerOver, true);
+            document.addEventListener('mousemove', app.onPointerMove, true);
+            app.initHistory();
             app.makeApi();
             JF.log.info('Jellyfin Saphi ' + JF.version, navigator.userAgent);
             JF.log.info('capabilities', app.capsSummary());
@@ -146,7 +148,12 @@ JF.app = (function () {
 
         capabilities: function () {
             if (!app.caps) {
-                app.caps = util.extend(JF.profile.detect(document.createElement('video')), app.settings.caps || {});
+                // On Saphi, canPlayType says "probably" even for AV1, which
+                // the TV cannot decode. Until real test clips have played,
+                // only H.264 is trusted there. Settings can switch the
+                // others on (settings.caps).
+                var saphiDefaults = platform.isSaphi() ? { hevc: false, vp9: false, av1: false } : {};
+                app.caps = util.extend(JF.profile.detect(document.createElement('video')), saphiDefaults, app.settings.caps || {});
             }
             return app.caps;
         },
@@ -177,11 +184,36 @@ JF.app = (function () {
         confirmExit: function () {
             var now = new Date().getTime();
             if (now - app.exitArmedAt < 2500) {
+                app.exiting = true;
                 platform.exit();
             } else {
                 app.exitArmedAt = now;
                 JF.ui.toast('Press Back again to exit');
             }
+        },
+
+        /**
+         * The Saphi browser keeps the Back key for itself: it goes back in
+         * the browser history, and the page never sees a keydown. So the app
+         * keeps one extra "guard" history entry. Back pops it (popstate);
+         * the guard is pushed again and the app handles Back as if the key
+         * had come through.
+         */
+        initHistory: function () {
+            var h = window.history;
+            if (!h || !h.pushState) return;
+            try {
+                h.replaceState({ jf: 'base' }, '');
+                h.pushState({ jf: 'guard' }, '');
+            } catch (e) { return; }
+            window.addEventListener('popstate', app.onPopState);
+        },
+
+        onPopState: function () {
+            if (app.exiting) return;
+            if (app.settings.debug) JF.log.debug('history back -> back');
+            try { window.history.pushState({ jf: 'guard' }, ''); } catch (e) { /* ignore */ }
+            app.dispatch('back');
         },
 
         onKeyDown: function (e) {
@@ -193,9 +225,15 @@ JF.app = (function () {
                 e.preventDefault();
                 return;
             }
+            if (!JF.router.current()) return;
+            e.preventDefault();
+            app.dispatch(action);
+        },
+
+        /** Routes an action ('ok', 'back', 'play'…) to the current screen. */
+        dispatch: function (action) {
             var screen = JF.router.current();
             if (!screen) return;
-            e.preventDefault();
             if (screen.onKey && screen.onKey(action)) return;
             var focus = screen.focus;
             if (action === 'submit') action = 'down';
@@ -230,6 +268,11 @@ JF.app = (function () {
         },
 
         onClick: function (e) {
+            if (e.target && /\brow-nav\b/.test(e.target.className || '')) {
+                e.preventDefault();
+                app.pageRow(e.target);
+                return;
+            }
             var target = app.focusTargetFor(e.target);
             if (app.settings.debug) JF.log.debug('click', e.target && e.target.className, '->', target ? 'focusable' : '-');
             if (!target) return;
@@ -242,11 +285,57 @@ JF.app = (function () {
             focus.select();
         },
 
+        /**
+         * A ‹ or › button of a card row: moves the row by a page of cards.
+         * This is how a pointer reaches cards that are off screen.
+         */
+        pageRow: function (button) {
+            var screen = JF.router.current();
+            var focus = screen && screen.focus;
+            var track = button.parentNode && button.parentNode.querySelector('.row-track');
+            if (!focus || !track) return;
+            for (var r = 0; r < focus.rows.length; r++) {
+                var row = focus.rows[r];
+                if (row.track !== track) continue;
+                var step = /\bnext\b/.test(button.className) ? app.ROW_PAGE : -app.ROW_PAGE;
+                focus.rowIndex = r;
+                row.index = Math.max(0, Math.min(row.items.length - 1, row.index + step));
+                focus.apply();
+                app.pointerLock();
+                return;
+            }
+        },
+
+        ROW_PAGE: 5,
+        pointer: { x: -1, y: -1, lockX: -2, lockY: -2 },
+
+        onPointerMove: function (e) {
+            app.pointer.x = e.clientX;
+            app.pointer.y = e.clientY;
+        },
+
+        /**
+         * After the view moves under a still pointer (a row or the screen
+         * scrolls), the browser may report the pointer over a new card. That
+         * must not move focus again, or the view would keep scrolling by
+         * itself. Hover moves focus only once the pointer itself has moved.
+         */
+        pointerLock: function () {
+            app.pointer.lockX = app.pointer.x;
+            app.pointer.lockY = app.pointer.y;
+        },
+
         onPointerOver: function (e) {
             // Don't pull focus away from a field the user is typing in.
             if (platform.isTextField(document.activeElement)) return;
+            if (e.clientX === app.pointer.lockX && e.clientY === app.pointer.lockY) return;
             var target = app.focusTargetFor(e.target);
-            if (target) JF.router.current().focus.focusElement(target);
+            var focus = target && JF.router.current().focus;
+            if (!focus || focus.focusedElement() === target) return;
+            focus.focusElement(target);
+            app.pointer.x = e.clientX;
+            app.pointer.y = e.clientY;
+            app.pointerLock();
         },
 
         /** Lays the 1920x1080 design canvas over the real window size. */

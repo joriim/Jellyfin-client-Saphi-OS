@@ -93,6 +93,18 @@ JF.Player = (function () {
         bottom.appendChild(stateIcon);
         bottom.appendChild(bar);
         bottom.appendChild(times);
+        // Buttons for a pointer: the Saphi remote moves a pointer, and OK
+        // clicks. The media keys still work as keys (see onKey).
+        var controls = el('div', 'osd-controls');
+        var controlButtons = [
+            JF.ui.button('‹ Back', function () { JF.router.pop(); }),
+            JF.ui.button('−' + settings.skipBack + ' s', function () { nudge(-settings.skipBack); }),
+            JF.ui.button('Play / Pause', function () { togglePause(); }, 'primary'),
+            JF.ui.button('+' + settings.skipForward + ' s', function () { nudge(settings.skipForward); })
+        ];
+        for (var cb = 0; cb < controlButtons.length; cb++) controls.appendChild(controlButtons[cb]);
+        bottom.appendChild(controls);
+        var focus = new JF.Focus(null);
         osd.appendChild(top);
         osd.appendChild(bottom);
         root.appendChild(osd);
@@ -360,10 +372,24 @@ JF.Player = (function () {
 
         // ------------------------------------------------------------ screen
 
+        // Pointer: moving it shows the controls; a click outside the
+        // buttons pauses or resumes.
+        root.addEventListener('mousemove', function () { if (!state.stopped) showOsd(); });
+        root.addEventListener('click', function (e) {
+            var n = e.target;
+            while (n && n !== root) {
+                if (n === controls) return;
+                n = n.parentNode;
+            }
+            if (!state.stopped) togglePause();
+        });
+
         var screen = {
             el: root,
             player: item,
+            focus: focus,
             onShow: function () {
+                focus.setRows([{ items: controlButtons, index: 2 }], 0);
                 if (!state.playSessionId && !state.stopped) load(util.ticksToSeconds(opts.startTicks || 0));
             },
             destroy: function () { stop(); },

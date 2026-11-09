@@ -226,6 +226,36 @@ html, body {
     overflow: visible;
 }
 
+/* ‹ › paging buttons for a pointer. */
+.row-nav {
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    z-index: 5;
+    width: 72px;
+    line-height: 1;
+    padding-top: 90px;
+    text-align: center;
+    font-size: 80px;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.55);
+    opacity: 0.6;
+    cursor: pointer;
+}
+
+.row-nav:hover {
+    opacity: 1;
+    background: rgba(0, 164, 220, 0.8);
+}
+
+.row-nav.prev {
+    left: -84px;
+}
+
+.row-nav.next {
+    right: 0;
+}
+
 .row-track {
     white-space: nowrap;
     -webkit-transition: -webkit-transform 0.25s ease-out;
@@ -524,6 +554,16 @@ html, body {
 
 .osd.visible {
     opacity: 1;
+}
+
+/* Hidden controls must not catch clicks; a click then pauses/resumes. */
+.osd .osd-controls {
+    visibility: hidden;
+    margin-top: 28px;
+}
+
+.osd.visible .osd-controls {
+    visibility: visible;
 }
 
 .osd-top {

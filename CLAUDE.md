@@ -22,8 +22,16 @@ Research and design are done. **Client code was written on branch
 Neither branch is merged into `main` (no PR).** The first TV try
 (2026-11-09) failed: Connect could not be pressed in the TV browser. The
 likely cause was that the browser drives a pointer and sends OK as a click,
-while the client handled only keydown and hid the cursor. Pointer and click
-support was added; not yet re-tested on the TV. The client code contains:
+while the client handled only keydown and hid the cursor. Since then, all
+made after the probe confirmed the pointer (and none re-tested on the TV yet):
+- pointer support: hover moves focus, a click selects, the cursor is visible;
+- browser Back: the app keeps a guard history entry, and `popstate` is
+  handled as the Back action;
+- ‹ › paging buttons on card rows;
+- clickable player controls;
+- on Saphi, HEVC, VP9 and AV1 direct play are off by default, with
+  Settings toggles for HEVC and VP9;
+- `?debug=1` turns the remote log on from the first screen. The client code contains:
 
 - **Option A:** `shell/saphi.js` (NativeShell for jellyfin-web),
   `tools/devserver.py` (dev proxy that injects the shell), and
