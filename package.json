@@ -1,0 +1,13 @@
+{
+  "name": "jellyfin-client-saphi-os",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Jellyfin client for Philips TVs running Saphi OS",
+  "license": "MPL-2.0",
+  "scripts": {
+    "test": "node --test tests/*.test.js && python3 -m unittest discover -s tests",
+    "dev": "python3 tools/devserver.py",
+    "e2e": "node --test tests/e2e/*.e2e.js",
+    "fake": "python3 tools/fakejellyfin.py"
+  }
+}

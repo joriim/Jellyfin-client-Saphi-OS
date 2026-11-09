@@ -38,7 +38,7 @@ The codec list applies to the TV's own media player. What the **browser's**
 | Route | Notes |
 |---|---|
 | Browser URL / bookmark | Works without changes to the TV. The main route |
-| Custom home tile | [UAEpro/philips-tv-saphi-os-jailbreak](https://github.com/UAEpro/philips-tv-saphi-os-jailbreak): unofficial, reversible HTML injection into the home screen. Depends on the firmware version |
+| Custom home tile | **Not available.** [UAEpro/philips-tv-saphi-os-jailbreak](https://github.com/UAEpro/philips-tv-saphi-os-jailbreak) replaces the Home dashboard through a DLNA injection, for one model and firmware (65PUT6703/56). It does not add app tiles, a firmware update can remove it, and the repository has no license |
 | App Gallery | Needs a commercial agreement with TP Vision. Unlikely for a legacy platform |
 | DLNA | The TV can browse a DLNA server from its media menu. Jellyfin's DLNA plugin "Play To" this TV often fails; browsing from the TV usually works. A custom DLNA profile may help |
 | External stick | An Android TV / Google TV / Fire TV stick with the official Jellyfin app. The practical fallback |
@@ -53,6 +53,17 @@ The codec list applies to the TV's own media player. What the **browser's**
   - HTTPS on port 1926 with digest authentication.
 - Quick check: `http://<tv-ip>:1925/6/system`.
 - Useful for sending keys during testing. It probably cannot launch apps.
+
+## Hints about the browser (from the jailbreak repository, unverified here)
+
+- Its Home runtime "targets an older browser": ES5 and simple CSS, no modern
+  `backdrop-filter`.
+- Sites using newer JavaScript syntax (Shahid, current Stremio Web) failed in
+  the TV's browser.
+- The Home key (`MENU`) is code 462; the Home page canvas is 1920×1080
+  whatever the panel resolution.
+- Installed apps are listed in `/3rd_rw/html5/dash/HomeMenu/current/app/appsInstalled.txt`
+  with launch URLs; there is no supported way to add an entry.
 
 ## Open questions for the probe
 
