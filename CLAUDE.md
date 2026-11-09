@@ -17,24 +17,54 @@ is possible via the unofficial
 
 ## Status
 
-Research and design are done. No client code yet.
+Research and design are done. **Client code exists on branch
+`ccr-510dfa11-xgoqxi`, but it is not merged into `main` (no PR) and has never
+run on a TV.** That branch was cut from the seed commit, before this file
+existed. It contains:
 
-Waiting on two tests on the real TV:
+- **Option A:** `shell/saphi.js` (NativeShell for jellyfin-web),
+  `tools/devserver.py` (dev proxy that injects the shell), and
+  `deploy/` (nginx + Docker);
+- **Option B:** `app/`, a working TV client in plain ES5 with no build step.
+  It has sign-in (Quick Connect and password), Home rows, library pages, and
+  playback (direct play with transcoding fallback, resume, progress
+  reporting, next episode);
+- tests: unit tests and Playwright e2e tests against `tools/fakejellyfin.py`;
+- `docs/plan-review.md` (proposes Option B as the main line) and
+  `docs/tv-setup-guide.md`.
 
-1. **Probe:** serve `probe/` (`python3 -m http.server 8000`) and open it in
-   the Saphi browser. Record:
+Desktop checks so far (2026-11-08): the client's API routes and JSON fields
+match the official Jellyfin 10.11.11 build, which is the owner's server. This
+was a static check only; nothing ran live against the owner's server. The TV
+test guide in Finnish is [docs/tv-testi.md](docs/tv-testi.md).
+
+Owner's server: Jellyfin **10.11.11** on a NAS (`NAS497CD0`) at
+`http://192.168.8.140:8096`.
+
+Waiting on two tests on the real TV. Both run through `tools/devserver.py`
+on a PC; see [docs/tv-testi.md](docs/tv-testi.md):
+
+1. **Probe:** open `http://<pc>:8000/probe/` in the Saphi browser. Results
+   are saved to `logs/probe-*.json`. Record:
    - user agent (browser engine and version);
    - ES2015 / ES2017 support;
    - MSE and EME;
    - `canPlayType` and `isTypeSupported` results;
    - window size;
    - remote key codes.
-2. **jellyfin-web:** open `http://<server>:8096` in the Saphi browser. Does it
-   load, use the TV layout, respond to the remote, and play video?
+2. **jellyfin-web:** open `http://<server>:8096` in the Saphi browser, and
+   with the Saphi shell at `http://<pc>:8000/web/index.html?saphi-debug=1`.
+   Does it load, use the TV layout, respond to the remote, and play video?
 
 The results decide which path to take:
 - **Option A:** wrapper around jellyfin-web.
 - **Option B:** custom lightweight client.
+
+**Open decision, for the owner:** the branch's `docs/plan-review.md` proposes
+reversing the order below: Option B becomes the main line, in plain ES5 with
+no build, served from Jellyfin's web folder. The owner has not approved this.
+Until the TV results are in and the owner decides, the key decisions below
+stand as written.
 
 ## Key decisions
 
