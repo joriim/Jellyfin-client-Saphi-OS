@@ -25,10 +25,9 @@ The codec list applies to the TV's own media player. What the **browser's**
 - Comes with a fixed set of preinstalled apps plus TP Vision's **App Gallery**.
   There is no public SDK, documentation or submission process. Developers who
   asked on forums got no answer.
-- Has a **full web browser** (Smart TV Archive). The engine is unknown
-  **(unverified)**:
-  - older Philips Linux TVs used Opera Presto 12;
-  - some later Philips TVs report a Chromium-based Opera engine ("OPR", "OMI").
+- Has a **full web browser** (Smart TV Archive). On the 55OLED754/12 it is
+  **Opera TV on Chromium 49** (probe, 2026-11-09; see below). Older Philips
+  Linux TVs used Opera Presto 12.
 - Older Philips user agents contain `HbbTV`, `CE-HTML`, `NETTV`, `PhilipsTV`
   and `SmartTvA` tokens. jellyfin-web's `isTv()` matches any user agent
   containing `tv`, so it would treat the Saphi browser as a TV.
@@ -64,6 +63,63 @@ The codec list applies to the TV's own media player. What the **browser's**
   whatever the panel resolution.
 - Installed apps are listed in `/3rd_rw/html5/dash/HomeMenu/current/app/appsInstalled.txt`
   with launch URLs; there is no supported way to add an entry.
+
+## Probe results: 55OLED754/12, 2026-11-09
+
+These come from a photo of the probe table on the owner's TV. Only the rows
+visible in the photo are recorded here; the rest of the table and the key
+codes are still to come (`logs/probe-*.json`).
+
+**User agent:**
+```
+Mozilla/5.0 (Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko)
+Chrome/49.0.2623.112 Safari/537.36 OPR/36.0.2128.0 OMI/4.8.0.129.Driver6.32 ,
+_TV_MT5806/091.004.093.001 (Philips, OLED754, wireless) CE-HTML/1.0
+NETTV/4.6.0.2 SignOn/2.0 SmartTvA/5.0.0 WH1.0 en
+```
+- **Engine: Chromium 49** (2016), as Opera TV ("OPR/36", "OMI/4.8"), on a
+  MediaTek MT5806 SoC (aarch64). It is not Presto.
+- jellyfin-web: `isTv()` is true (`tv`) and `operaTv` is true (`opr/`).
+  Chrome 49 falls between the Chrome 47 and 53 entries in jellyfin-web's
+  browserslist.
+
+| Feature | Result |
+|---|---|
+| Screen | 1920×1080, window 1920×1080, dpr 1 |
+| ES2015 (arrow, let, class) | yes |
+| ES2017 async/await | **no** |
+| Promise, fetch, WebSocket, localStorage | yes |
+| CSS grid | **no** |
+| MediaSource / EME | yes / yes |
+| `oipfObjectFactory` (HbbTV/OIPF) | yes |
+
+| Format | `canPlayType` | MSE |
+|---|---|---|
+| MP4 H.264 + AAC | probably | yes |
+| MP4 HEVC (hvc1 / hev1) | probably | yes |
+| WebM VP9 | probably | yes |
+| MP4 AV1 | probably | no. **Suspect:** the TV's specification lists no AV1 |
+| MP4 AC-3 / E-AC-3 | probably | **no** |
+| Matroska | "" (**no**) | no |
+| MPEG-TS | maybe | no |
+| HLS (native) | maybe | no |
+| DASH (native) | maybe | no |
+
+**Remote input:** the browser shows a **mouse pointer** that the remote
+moves. The probe still said "Results sent (0 keys)" in the photo. Whether any
+key reaches the page as a keydown is not yet known.
+
+What this means:
+- **MKV cannot be direct played in the browser**, although the TV's own
+  player supports MKV. MKV must be remuxed by the server (direct stream to
+  MP4/TS) or transcoded.
+- **AC-3/E-AC-3 work only without MSE**, in progressive MP4 or native HLS.
+  An hls.js/MSE player would need AAC.
+- `canPlayType` answers cannot be trusted as they stand (AV1 "probably").
+  Codecs need real test clips before direct play is enabled, as CLAUDE.md
+  already says.
+- **Pointer-based input:** a client must work with hover and click, not
+  only keys. Off-screen content needs a way to scroll by pointer.
 
 ## Open questions for the probe
 

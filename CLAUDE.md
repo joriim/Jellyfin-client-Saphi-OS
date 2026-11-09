@@ -99,9 +99,18 @@ stand as written.
   - no AV1; MP4 is not listed.
 - HDR: Dolby Vision, HDR10, HDR10+, HLG.
 - The browser `<video>` element may support less than the TV's own player.
+- **Probe, 2026-11-09** (from a photo; details in `docs/saphi-platform.md`):
+  - engine: **Opera TV on Chromium 49** (`OPR/36`, `OMI/4.8`), MediaTek
+    MT5806, 1920×1080 at dpr 1;
+  - ES2015 yes, async/await no, CSS grid no; fetch, Promise, WebSocket,
+    localStorage, MSE and EME all yes;
+  - `canPlayType`: H.264, HEVC and VP9 "probably" (also with MSE). AV1
+    "probably" is suspect. AC-3/E-AC-3 "probably", but not with MSE.
+    **Matroska: no.** TS, HLS and DASH: "maybe";
+  - the remote moves a **mouse pointer**. Key events are not yet confirmed
+    (0 keys in the photo).
 - Older Philips user agents contain `PhilipsTV`, `NETTV`, `SmartTvA`, `HbbTV`
-  and `CE-HTML`. The engine is either Opera Presto 12 or a Chromium-based Opera
-  ("OPR"); which one Saphi uses is **unverified**.
+  and `CE-HTML`; this TV's user agent has all except `PhilipsTV` and `HbbTV`.
 - JointSPACE control API v6 on `http://<tv>:1925` (power, keys, Ambilight).
   Some Saphi sets need HTTPS on port 1926 with digest authentication.
 - DLNA: browsing a server from the TV works; Jellyfin "Play To" this TV often
