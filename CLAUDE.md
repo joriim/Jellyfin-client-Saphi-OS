@@ -107,8 +107,10 @@ stand as written.
   - `canPlayType`: H.264, HEVC and VP9 "probably" (also with MSE). AV1
     "probably" is suspect. AC-3/E-AC-3 "probably", but not with MSE.
     **Matroska: no.** TS, HLS and DASH: "maybe";
-  - the remote moves a **mouse pointer**. Key events are not yet confirmed
-    (0 keys in the photo).
+  - the **arrow keys move a mouse pointer** and never reach the page; OK
+    clicks. Other keys (Back, Play, colour keys) do reach the page as
+    keydown, with codes still to come. **Navigation must therefore work by
+    pointer**, which applies to both Option A and Option B.
 - Older Philips user agents contain `PhilipsTV`, `NETTV`, `SmartTvA`, `HbbTV`
   and `CE-HTML`; this TV's user agent has all except `PhilipsTV` and `HbbTV`.
 - JointSPACE control API v6 on `http://<tv>:1925` (power, keys, Ambilight).

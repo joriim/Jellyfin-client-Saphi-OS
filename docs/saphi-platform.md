@@ -105,9 +105,13 @@ NETTV/4.6.0.2 SignOn/2.0 SmartTvA/5.0.0 WH1.0 en
 | HLS (native) | maybe | no |
 | DASH (native) | maybe | no |
 
-**Remote input:** the browser shows a **mouse pointer** that the remote
-moves. The probe still said "Results sent (0 keys)" in the photo. Whether any
-key reaches the page as a keydown is not yet known.
+**Remote input** (confirmed by the owner, 2026-11-09):
+- the browser shows a **mouse pointer**, and the **arrow keys move the
+  pointer**. They do not reach the page as key events;
+- **other keys do reach the page** as key events: the probe's key text and
+  counter change for keys such as Back, Play and the colour keys. Their codes
+  are still to come (`logs/probe-*.json`);
+- OK over an element clicks it.
 
 What this means:
 - **MKV cannot be direct played in the browser**, although the TV's own
@@ -118,8 +122,10 @@ What this means:
 - `canPlayType` answers cannot be trusted as they stand (AV1 "probably").
   Codecs need real test clips before direct play is enabled, as CLAUDE.md
   already says.
-- **Pointer-based input:** a client must work with hover and click, not
-  only keys. Off-screen content needs a way to scroll by pointer.
+- **Pointer-based navigation:** arrow-key focus navigation cannot work in
+  this browser. A client must be driven by hover and click, and must let the
+  pointer scroll off-screen content. Back, media and colour keys can still
+  be used as keys.
 
 ## Open questions for the probe
 
