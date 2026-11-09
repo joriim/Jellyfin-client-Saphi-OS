@@ -108,8 +108,10 @@ stand as written.
     "probably" is suspect. AC-3/E-AC-3 "probably", but not with MSE.
     **Matroska: no.** TS, HLS and DASH: "maybe";
   - the **arrow keys move a mouse pointer** and never reach the page; OK
-    clicks. Other keys (Back, Play, colour keys) do reach the page as
-    keydown, with codes still to come. **Navigation must therefore work by
+    clicks. Media and colour keys reach the page as keydown with the
+    standard VK codes (Play 415, Pause 19, Stop 413, Rewind 412,
+    Forward 417, Red 403, Yellow 405, Blue 406). The Back code is not yet
+    captured. **Navigation must therefore work by
     pointer**, which applies to both Option A and Option B.
 - Older Philips user agents contain `PhilipsTV`, `NETTV`, `SmartTvA`, `HbbTV`
   and `CE-HTML`; this TV's user agent has all except `PhilipsTV` and `HbbTV`.

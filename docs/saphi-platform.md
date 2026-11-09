@@ -108,9 +108,23 @@ NETTV/4.6.0.2 SignOn/2.0 SmartTvA/5.0.0 WH1.0 en
 **Remote input** (confirmed by the owner, 2026-11-09):
 - the browser shows a **mouse pointer**, and the **arrow keys move the
   pointer**. They do not reach the page as key events;
-- **other keys do reach the page** as key events: the probe's key text and
-  counter change for keys such as Back, Play and the colour keys. Their codes
-  are still to come (`logs/probe-*.json`);
+- **other keys do reach the page** as keydown events. Codes from
+  `probe-mw9pucf9.json` (2026-11-09 22:30). `event.code` was empty for every
+  key:
+
+  | Key | `keyCode` | `event.key` |
+  |---|---|---|
+  | Play | 415 | `MediaPlay` |
+  | Pause | 19 | `Pause` |
+  | Stop | 413 | `MediaStop` |
+  | Rewind | 412 | `MediaRewind` |
+  | Fast forward | 417 | `MediaFastForward` |
+  | Record | 416 | `MediaRecord` |
+  | Red / Yellow / Blue | 403 / 405 / 406 | `ColorF0Red` / `ColorF2Yellow` / `ColorF3Blue` |
+
+  These are the standard OIPF/HbbTV VK codes. Not captured: **Back**, Green
+  (presumably 404), OK, Info, CH+/−, the numbers, and a combined Play/Pause
+  key (the remote has separate Play and Pause);
 - OK over an element clicks it.
 
 What this means:
