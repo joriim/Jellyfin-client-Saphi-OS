@@ -17,10 +17,13 @@ is possible via the unofficial
 
 ## Status
 
-Research and design are done. **Client code exists on branch
-`ccr-510dfa11-xgoqxi`, but it is not merged into `main` (no PR) and has never
-run on a TV.** That branch was cut from the seed commit, before this file
-existed. It contains:
+Research and design are done. **Client code was written on branch
+`ccr-510dfa11-xgoqxi` and merged into `ccr-4db1944c-ms25ix` on 2026-11-09.
+Neither branch is merged into `main` (no PR).** The first TV try
+(2026-11-09) failed: Connect could not be pressed in the TV browser. The
+likely cause was that the browser drives a pointer and sends OK as a click,
+while the client handled only keydown and hid the cursor. Pointer and click
+support was added; not yet re-tested on the TV. The client code contains:
 
 - **Option A:** `shell/saphi.js` (NativeShell for jellyfin-web),
   `tools/devserver.py` (dev proxy that injects the shell), and

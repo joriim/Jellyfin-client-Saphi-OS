@@ -248,3 +248,22 @@ test('Back on Home returns to the top row, then asks before exiting; no page err
     assert.strictEqual(await screen(), 'screen-home');
     assert.deepStrictEqual(errors, []);
 });
+
+test('pointer: a click on Connect works (TV browsers with a remote-driven pointer)', async () => {
+    // A fresh page with no session, driven only by the mouse.
+    const p = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    const perrors = [];
+    p.on('pageerror', (e) => perrors.push(e.message));
+    await p.goto(BASE + '/web/saphi/?debug=1');
+    await p.waitForSelector('.screen-connect .btn.primary');
+    assert.notStrictEqual(await p.evaluate(() => getComputedStyle(document.body).cursor), 'none');
+    // Hover moves the focus highlight; click selects.
+    await p.hover('.screen-connect .field');
+    await p.hover('.screen-connect .btn.primary');
+    assert.match(await p.getAttribute('.screen-connect .btn.primary', 'class'), /\bfocused\b/);
+    await p.click('.screen-connect .btn.primary');
+    await p.waitForSelector('.screen-login .qc-code');
+    assert.strictEqual(await p.evaluate(() => JF.app.settings.debug), true);
+    assert.deepStrictEqual(perrors, []);
+    await p.close();
+});

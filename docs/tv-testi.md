@@ -13,8 +13,8 @@ NAS:n asetuksia muuteta. Testien 1 ja 2 tulokset ratkaisevat, kumpi
 toteutustapa valitaan (A = jellyfin-web, B = oma client), joten tee ne ensin.
 
 Tarkempi englanninkielinen ohje ja vianetsintä:
-[`docs/tv-setup-guide.md`](https://github.com/joriim/Jellyfin-client-Saphi-OS/blob/ccr-510dfa11-xgoqxi/docs/tv-setup-guide.md)
-haarassa `ccr-510dfa11-xgoqxi`.
+[`docs/tv-setup-guide.md`](tv-setup-guide.md)
+samassa kansiossa.
 
 ```
 TV:n selain ──► PC (devserver.py, portti 8000) ──► NAS Jellyfin (192.168.8.140:8096)
@@ -28,7 +28,7 @@ TV:n selain ──► PC (devserver.py, portti 8000) ──► NAS Jellyfin (192
    `py --version`. Jos komentoa ei löydy, asenna Python osoitteesta
    python.org. Rastita asennuksessa **"Add python.exe to PATH"**.
 2. **Lataa koodi:** GitHubissa `joriim/Jellyfin-client-Saphi-OS`, valitse
-   haaravalikosta **`ccr-510dfa11-xgoqxi`**, sitten **Code → Download ZIP**.
+   haaravalikosta **`ccr-4db1944c-ms25ix`**, sitten **Code → Download ZIP**.
    Pura ZIP esimerkiksi kansioon `C:\saphi`. Kansiossa pitää näkyä `app`,
    `probe` ja `tools`.
 3. **Selvitä PC:n IP-osoite.** Windowsissa aja `ipconfig` ja katso kohta
@@ -98,9 +98,14 @@ Tämä testaa vaihtoehtoa A ilman mitään omaa koodia.
 
 ## 3. Oma client (vaihtoehto B, 15 min)
 
-1. TV:n selaimessa avaa `192.168.8.X:8000`. Se ohjaa sivulle `/web/saphi/`.
+1. TV:n selaimessa avaa `192.168.8.X:8000/web/saphi/?debug=1`.
+   `?debug=1` laittaa debug-lokin päälle heti alusta, joten jokainen
+   näppäinpainallus ja klikkaus tallentuu PC:lle tiedostoon `logs/tv.log`.
    **Tallenna kirjanmerkiksi.**
-2. **Connect → OK.** Kirjaudu jommallakummalla tavalla:
+2. **Connect → OK.** Jos selaimessa näkyy osoitin (nuoli), siirrä se
+   kaukosäätimen nuolilla Connect-painikkeen päälle ja paina OK. Kirjaa
+   tarkistuslistaan, kumpi tapa toimi: korostus vai osoitin. Kirjaudu
+   jommallakummalla tavalla:
    - **Quick Connect:** TV näyttää 6-numeroisen koodin. Avaa puhelimessa
      Jellyfin → profiilikuva → Quick Connect, syötä koodi ja hyväksy.
    - **Salasana:** OK avaa kentän ja TV:n näppäimistön, ▼ siirtää
@@ -153,6 +158,7 @@ Projektikansiosta PC:ltä:
 | TV ei avaa sivua | Tarkista ensin, että osoite toimii PC:n selaimella. Salli Python palomuurissa (Yksityiset verkot) ja tarkista, että PC:n verkkoprofiili on *Yksityinen*. TV ja PC eivät saa olla vierasverkossa |
 | PC:n ikkuna sanoo `jellyfin unreachable` | Tarkista, että `http://192.168.8.140:8096` aukeaa PC:llä. Älä lisää osoitteen loppuun `/web` |
 | `Address already in use` | Lisää komentoon `--port 8090` ja käytä TV:llä porttia `:8090` |
+| Connect (tai muu painike) ei reagoi | Lataa haara uudelleen, sillä 2026-11-09 lisättiin tuki osoittimelle ja klikkaukselle. Avaa `…/web/saphi/?debug=1`, paina OK muutaman kerran ja lähetä `logs/tv.log` sekä kuva ruudusta. Lokista näkyy, tuliko painallus näppäimenä (`key …`) vai klikkauksena (`click …`) vai ei ollenkaan |
 | Client on TV:llä tyhjä tai musta | TV:n selain ei pysty ajamaan koodia. Tämäkin on tärkeä tulos: lähetä probe-tiedosto ja kuva |
 | Jokin näppäin ei tee mitään (varsinkin Back) | Odotettavaa ennen proben tuloksia. Laita debug-loki päälle, paina näppäintä ja lähetä `logs/tv.log`, josta näkyy näppäinkoodi |
 | Video ei käynnisty | Kirjaa alapalkin teksti ja virheilmoitus. Client vaihtaa itse transkoodaukseen, jos suora toisto epäonnistuu |

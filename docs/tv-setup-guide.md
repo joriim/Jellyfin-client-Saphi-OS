@@ -56,22 +56,22 @@ the client on the Jellyfin server itself, so the PC is no longer needed.
 
 ## Part 2. Get the code onto the PC
 
-The work is on the branch `ccr-510dfa11-xgoqxi` of
+The work is on the branch `ccr-4db1944c-ms25ix` of
 `joriim/Jellyfin-client-Saphi-OS`. Choose one of these:
 
 **A. Download a ZIP (no Git needed)**
 
 1. Open the repository on GitHub in the PC's browser.
-2. Click the branch menu (it says `main`) and choose **`ccr-510dfa11-xgoqxi`**.
+2. Click the branch menu (it says `main`) and choose **`ccr-4db1944c-ms25ix`**.
 3. Click the green **Code** button → **Download ZIP**.
 4. Unzip it somewhere easy, for example `C:\saphi` or `~/saphi`.
-   The folder inside is named something like `Jellyfin-client-Saphi-OS-ccr-510dfa11-xgoqxi`.
+   The folder inside is named something like `Jellyfin-client-Saphi-OS-ccr-4db1944c-ms25ix`.
    You should see `app`, `docs`, `probe`, `tools` and `README.md` in it.
 
 **B. With Git**
 
 ```sh
-git clone -b ccr-510dfa11-xgoqxi https://github.com/joriim/Jellyfin-client-Saphi-OS.git
+git clone -b ccr-4db1944c-ms25ix https://github.com/joriim/Jellyfin-client-Saphi-OS.git
 cd Jellyfin-client-Saphi-OS
 ```
 

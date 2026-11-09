@@ -13,7 +13,6 @@ html, body {
     color: #fff;
     font-family: "Noto Sans", Roboto, "Segoe UI", Arial, sans-serif;
     font-size: 28px;
-    cursor: none;
 }
 
 #app {
@@ -89,6 +88,7 @@ html, body {
 
 /* ---------------------------------------------------------------- focus */
 .focusable {
+    cursor: pointer;
     -webkit-transition: -webkit-transform 0.15s ease-out, box-shadow 0.15s;
     transition: transform 0.15s ease-out, box-shadow 0.15s;
 }

@@ -36,11 +36,18 @@ JF.app = (function () {
         start: function (root) {
             app.session = storage.get('session', {}) || {};
             app.settings = util.extend({}, DEFAULT_SETTINGS, storage.get('settings', {}));
+            // ?debug=1 turns on the remote log from the first screen, before
+            // Settings can be reached (for example to log key codes).
+            if (/[?&]debug=1\b/.test(window.location.search || '')) app.settings.debug = true;
             app.applySettings();
             JF.router.init(root);
             app.scale();
             window.addEventListener('resize', app.scale);
             document.addEventListener('keydown', app.onKeyDown, true);
+            // Some TV browsers drive a pointer with the remote and turn OK
+            // into a click instead of a keydown, so pointer input works too.
+            document.addEventListener('click', app.onClick, true);
+            document.addEventListener('mouseover', app.onPointerOver, true);
             app.makeApi();
             JF.log.info('Jellyfin Saphi ' + JF.version, navigator.userAgent);
             JF.log.info('capabilities', app.capsSummary());
@@ -203,6 +210,43 @@ JF.app = (function () {
             if (action === 'back') {
                 if (!JF.router.pop()) app.confirmExit();
             }
+        },
+
+        /**
+         * The focusable element of the current screen that contains node,
+         * or null. Walks up from node to the screen root.
+         */
+        focusTargetFor: function (node) {
+            var screen = JF.router.current();
+            var focus = screen && screen.focus;
+            if (!focus) return null;
+            while (node && node !== document) {
+                for (var r = 0; r < focus.rows.length; r++) {
+                    if (focus.rows[r].items.indexOf(node) !== -1) return node;
+                }
+                node = node.parentNode;
+            }
+            return null;
+        },
+
+        onClick: function (e) {
+            var target = app.focusTargetFor(e.target);
+            if (app.settings.debug) JF.log.debug('click', e.target && e.target.className, '->', target ? 'focusable' : '-');
+            if (!target) return;
+            var focus = JF.router.current().focus;
+            focus.focusElement(target);
+            // Text fields keep the browser's own click: it focuses the field
+            // and opens the on-screen keyboard.
+            if (platform.isTextField(target)) return;
+            e.preventDefault();
+            focus.select();
+        },
+
+        onPointerOver: function (e) {
+            // Don't pull focus away from a field the user is typing in.
+            if (platform.isTextField(document.activeElement)) return;
+            var target = app.focusTargetFor(e.target);
+            if (target) JF.router.current().focus.focusElement(target);
         },
 
         /** Lays the 1920x1080 design canvas over the real window size. */
